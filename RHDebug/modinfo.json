@@ -1,0 +1,16 @@
+{
+    "type": "code",
+    "modid": "rhdebug",
+    "name": "RHDebug",
+    "authors": [
+        "Lantalia"
+    ],
+    "description": "Debug server side lock issues",
+    "version": "1.0.0",
+    "dependencies": {
+        "game": "1.19.7",
+        "survival": "1.19.7"
+    },
+    "side": "Server",
+    "requiredOnClient":  false
+}
