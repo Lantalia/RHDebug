@@ -27,6 +27,13 @@ namespace RHDebug {
         {
             return array == null ? "null" : "[" + String.Join(",", array) + "]";
         }
+        public static String DietFormat(CreatureDiet __instance)
+        {
+            return String.Format("({0}; {1}; {2})",
+                ArrayFormat(__instance.FoodCategories == null ? null : Array.ConvertAll<EnumFoodCategory, String>(__instance.FoodCategories, x => x.ToString())),
+                ArrayFormat(__instance.FoodTags),
+                ArrayFormat(__instance.SkipFoodTags));
+        }
         public override bool ShouldLoad(EnumAppSide side)
         {
             return side == EnumAppSide.Server;
@@ -149,21 +156,17 @@ namespace RHDebug {
                 if (dump_diet)
                 {
                     dump_diet = false;
-                    api.Logger.Event("Dump in CreatureDiet.Matches(ItemStack) {0} when checking diet ({1}; {2}; {3})",
+                    api.Logger.Event("Dump in CreatureDiet.Matches(ItemStack) {0} when checking diet {1}",
                         itemstack?.GetName(),
-                        ArrayFormat(Array.ConvertAll<EnumFoodCategory, String>(__instance.FoodCategories, x => x.ToString())),
-                        ArrayFormat(__instance.FoodTags),
-                        ArrayFormat(__instance.SkipFoodTags));
+                        DietFormat(__instance));
                 }
                 if (itemstack?.Collectible == null) {
                     int servertime = api.Server.ServerUptimeSeconds;
                     if (last_message_time_creature_diet + message_delta <= servertime)
                     {
-                        api.Logger.Event("Invalid itemstack in CreatureDiet.Matches(ItemStack) {0} when checking diet ({1}; {2}; {3})", 
+                        api.Logger.Event("Invalid itemstack in CreatureDiet.Matches(ItemStack) {0} when checking diet {1}", 
                             itemstack?.GetName(),
-                            ArrayFormat(Array.ConvertAll<EnumFoodCategory,String>(__instance.FoodCategories, x=> x.ToString() )), 
-                            ArrayFormat(__instance.FoodTags), 
-                            ArrayFormat(__instance.SkipFoodTags));
+                            DietFormat(__instance));
                         last_message_time_creature_diet = servertime;
 
                     }
