@@ -14,6 +14,7 @@ namespace RHDebug {
         public static int last_message_time_projectile = 0;
         public static int last_message_time_basket_trap = 0;
         public static int last_message_time_creature_diet = 0;
+        public static int last_message_time_micro = 0;
         public static int message_delta = 30;
         public static bool fixup_broken = true;
         public static bool skip_broken = false;
@@ -21,6 +22,7 @@ namespace RHDebug {
         public static bool dump_projectile = false;
         public static bool dump_trap = false;
         public static bool dump_diet = false;
+        public static bool dump_micro = false;
         public static ICoreServerAPI api;
         public Harmony harmony;
         public static String ArrayFormat(Object[] array)
@@ -73,7 +75,7 @@ namespace RHDebug {
                 .EndSubCommand()
                 .BeginSubCommand("dump")
                     .WithDescription("Dump the next projectile,basket,diet")
-                    .HandleWith(_ => { dump_projectile = dump_trap = dump_diet = true; return TextCommandResult.Success(); })
+                    .HandleWith(_ => { dump_projectile = dump_trap = dump_diet = dump_micro = true; return TextCommandResult.Success(); })
                     .BeginSubCommand("projectile")
                         .WithDescription("Dump the next projectile")
                         .HandleWith(_ => { dump_projectile = true; return TextCommandResult.Success(); })
@@ -85,6 +87,10 @@ namespace RHDebug {
                     .BeginSubCommand("diet")
                         .WithDescription("Dump the next creature diet Matches")
                         .HandleWith(_ => { dump_diet = true; return TextCommandResult.Success(); })
+                    .EndSubCommand()
+                    .BeginSubCommand("micro")
+                        .WithDescription("Dump the next micro block sound interaction")
+                        .HandleWith(_ => { dump_micro = true; return TextCommandResult.Success(); })
                     .EndSubCommand()
                 .EndSubCommand()
 ;
@@ -148,6 +154,7 @@ namespace RHDebug {
             }
 
         }
+
         [HarmonyPatch(typeof(CreatureDiet), "Matches",new Type[] {typeof(ItemStack)})]
         class PatchCreatureDiet
         {
@@ -174,6 +181,7 @@ namespace RHDebug {
                 return true;
             }
         }
+
         [HarmonyPatch(typeof(BlockEntityBasketTrap), "IsSuitableFor")]
         class PatchBlockEntityBasketTrap
         {
@@ -205,13 +213,48 @@ namespace RHDebug {
                 }
                 if (dump_trap) {
                     dump_trap = false;
-                    api.Logger.Event("Dump in BlockEntityBasketTrap.IsSuitableFor itemstack ({0})  at {1} when checking entity {2} at {3}",
+                    api.Logger.Event("Dump in BlockEntityBasketTrap.IsSuitableFor itemstack ({0}) at {1} when checking entity {2} at {3}",
                         __instance.Inventory[0]?.Itemstack?.GetName(), __instance.Pos,
                         entity?.Code, entity?.ServerPos);
                 }
                 return true;
             }
         }
+
+        [HarmonyPatch(typeof(MicroBlockSounds), "get_block")]
+        class PatchMicroBlockSounds
+        {
+            public static bool Prefix(MicroBlockSounds __instance, ref Block __result)
+            {
+                var blocks = __instance.be.Api.World.Blocks;
+                var block_count = blocks.Count;
+                var blockids = __instance.be.BlockIds;
+                if (blockids != null)
+                {
+                    int servertime = api.Server.ServerUptimeSeconds;
+                    foreach ( var blockid in blockids )
+                    {
+                        if (blockid < 0 || blockid >= block_count)
+                        {
+                            if (last_message_time_micro + message_delta <= servertime)
+                            {
+                                api.Logger.Event("Invalid blockid {0} in microblock at ({1}) BlockIds [{2}] blockId count is {3}", blockid, __instance.be.Pos, String.Join(", ", blockids), block_count);
+                                last_message_time_micro = servertime;
+                            }
+                            __result = __instance.defaultBlock;
+                            return false;
+                        }
+                    }
+                }
+                if (dump_micro)
+                {
+                    dump_micro = false;
+                    api.Logger.Event("Dump in MicroBlockSounds.get_block at ({0}) BlockIds [{1}] ", __instance.be.Pos, blockids == null ? "" : String.Join(", ", blockids));
+                }
+                return true;
+            }
+        }
+
     }
 
 }
